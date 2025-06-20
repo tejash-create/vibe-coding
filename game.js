@@ -24,11 +24,20 @@ const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/
 const gameState = {
     score: 0,
     isGameOver: false,
-    canRestart: false
+    canRestart: false,
+    pipeSpawnInterval: null
 }
 
 // Load assets and set up scene
 scene("game", () => {
+    // Reset game state
+    gameState.score = 0
+    gameState.isGameOver = false
+    gameState.canRestart = false
+    if (gameState.pipeSpawnInterval) {
+        clearInterval(gameState.pipeSpawnInterval)
+    }
+
     // Set gravity
     setGravity(GRAVITY)
 
@@ -132,111 +141,6 @@ scene("game", () => {
         }
     })
 
-    // Spawn pipes periodically
-    loop(2.5, () => {
-        spawnPipes()
-    })
-
-    // Update pipes
-    onUpdate("pipe", (p) => {
-        if (!gameState.isGameOver) {
-            p.move(-p.speed, 0)
-            
-            if (!p.passed && p.pos.x + PIPE_WIDTH < bird.pos.x) {
-                p.passed = true
-                scoreText.value += 0.5
-                scoreText.text = "Score: " + Math.floor(scoreText.value)
-            }
-            
-            if (p.pos.x < -PIPE_WIDTH) {
-                destroy(p)
-            }
-        }
-    })
-
-    // Controls for both touch and keyboard
-    // Keyboard controls
-    onKeyPress("space", () => {
-        if (!gameState.isGameOver && bird.isAlive) {
-            bird.flap()
-        }
-    })
-
-    // Touch/click controls
-    onClick(() => {
-        if (!gameState.isGameOver && bird.isAlive) {
-            bird.flap()
-        } else if (gameState.canRestart) {
-            go("game")
-        }
-    })
-
-    // Mobile-friendly restart
-    onTouchStart(() => {
-        if (gameState.isGameOver && gameState.canRestart) {
-            go("game")
-        }
-    })
-
-    // Keyboard restart
-    onKeyPress("r", () => {
-        if (gameState.isGameOver && gameState.canRestart) {
-            go("game")
-        }
-    })
-
-    // Collision detection
-    bird.onCollide("pipe", () => {
-        if (bird.isAlive) {
-            bird.isAlive = false
-            gameState.isGameOver = true
-            createExplosion(bird)
-            bird.hidden = true
-            addGameOver()
-        }
-    })
-
-    bird.onCollide("ground", () => {
-        if (bird.isAlive) {
-            bird.isAlive = false
-            gameState.isGameOver = true
-            createExplosion(bird)
-            bird.hidden = true
-            addGameOver()
-        }
-    })
-
-    function addGameOver() {
-        const gameOverText = isMobile ? "Game Over!\nTap to restart" : "Game Over!\nPress R to restart"
-        add([
-            text(gameOverText, { 
-                size: isMobile ? 48 : 32, 
-                align: "center",
-                font: "arial",
-            }),
-            pos(width() / 2, height() / 2),
-            anchor("center"),
-            color(255, 0, 0),
-        ])
-        // Add a slight delay before allowing restart
-        wait(0.5, () => {
-            gameState.canRestart = true
-        })
-    }
-
-    // Function to create explosion effect
-    function createExplosion(bird) {
-        for (let i = 0; i < 20; i++) {
-            add([
-                circle(2),
-                pos(bird.pos),
-                color(255, 255, 0),
-                move(rand(0, 360), rand(60, 120)),
-                lifespan(0.5),
-            ])
-        }
-    }
-
     // Function to create a pair of pipes
     function spawnPipes() {
         if (gameState.isGameOver) return
@@ -268,6 +172,106 @@ scene("game", () => {
                 speed: PIPE_SPEED
             }
         ])
+    }
+
+    // Start spawning pipes
+    gameState.pipeSpawnInterval = setInterval(spawnPipes, 2500)
+
+    // Update pipes
+    onUpdate("pipe", (p) => {
+        if (!gameState.isGameOver) {
+            p.move(-p.speed, 0)
+            
+            if (!p.passed && p.pos.x + PIPE_WIDTH < bird.pos.x) {
+                p.passed = true
+                scoreText.value += 0.5
+                scoreText.text = "Score: " + Math.floor(scoreText.value)
+            }
+            
+            if (p.pos.x < -PIPE_WIDTH) {
+                destroy(p)
+            }
+        }
+    })
+
+    // Controls for both touch and keyboard
+    // Keyboard controls
+    onKeyPress("space", () => {
+        if (!gameState.isGameOver && bird.isAlive) {
+            bird.flap()
+        }
+    })
+
+    // Touch/click controls for flapping and restarting
+    onClick(() => {
+        if (!gameState.isGameOver && bird.isAlive) {
+            bird.flap()
+        } else if (gameState.canRestart) {
+            destroyAll("pipe")
+            go("game")
+        }
+    })
+
+    // Keyboard restart
+    onKeyPress("r", () => {
+        if (gameState.isGameOver && gameState.canRestart) {
+            destroyAll("pipe")
+            go("game")
+        }
+    })
+
+    // Collision detection
+    bird.onCollide("pipe", () => {
+        if (bird.isAlive) {
+            handleGameOver()
+        }
+    })
+
+    bird.onCollide("ground", () => {
+        if (bird.isAlive) {
+            handleGameOver()
+        }
+    })
+
+    function handleGameOver() {
+        bird.isAlive = false
+        gameState.isGameOver = true
+        createExplosion(bird)
+        bird.hidden = true
+        clearInterval(gameState.pipeSpawnInterval)
+        destroyAll("pipe")
+        addGameOver()
+    }
+
+    function addGameOver() {
+        const gameOverText = isMobile ? "Tap anywhere to restart" : "Press R to restart"
+        add([
+            text(gameOverText, { 
+                size: isMobile ? 48 : 32, 
+                align: "center",
+                font: "arial",
+            }),
+            pos(width() / 2, height() / 2),
+            anchor("center"),
+            color(255, 0, 0),
+        ])
+        // Add a slight delay before allowing restart
+        wait(0.5, () => {
+            gameState.canRestart = true
+        })
+    }
+
+    // Function to create explosion effect
+    function createExplosion(bird) {
+        for (let i = 0; i < 20; i++) {
+            add([
+                circle(2),
+                pos(bird.pos),
+                color(255, 255, 0),
+                move(rand(0, 360), rand(60, 120)),
+                lifespan(0.5),
+            ])
+        }
     }
 })
 

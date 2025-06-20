@@ -25,14 +25,18 @@
         
         #gameContainer {
             position: relative;
-            width: 100%;
-            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            width: 100%;
+            height: 100vh;
         }
         
         canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             border: 2px solid white;
             max-width: 100%;
             max-height: 100vh;
@@ -42,15 +46,15 @@
         
         @media (orientation: portrait) {
             canvas {
-                width: 100%;
-                height: auto;
+                width: 100% !important;
+                height: auto !important;
             }
         }
         
         @media (orientation: landscape) {
             canvas {
-                height: 100vh;
-                width: auto;
+                height: 100vh !important;
+                width: auto !important;
             }
         }
     </style>
