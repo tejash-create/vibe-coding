@@ -7,18 +7,24 @@ const FLAP_FORCE = 240   // Adjusted flap force
 const PIPE_SPEED = 160
 const GROUND_HEIGHT = 112
 
-// Initialize Kaboom
-kaboom({
+// Initialize Kaboom with responsive canvas
+const k = kaboom({
     width: 800,
     height: 600,
     background: [135, 206, 235], // Sky blue background
     global: true,
+    scale: 1,
+    touchToMouse: true, // Convert touch events to mouse events
 })
+
+// Detect if we're on mobile
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
 // Create a game object to track state
 const gameState = {
     score: 0,
-    isGameOver: false
+    isGameOver: false,
+    canRestart: false
 }
 
 // Load assets and set up scene
@@ -95,16 +101,22 @@ scene("game", () => {
         }
     ])
 
-    // Score display
+    // Score display - adjust size based on device
     const scoreText = add([
-        text("Score: 0", { size: 24 }),
+        text("Score: 0", { 
+            size: isMobile ? 36 : 24,
+            font: "arial",
+        }),
         pos(24, 24),
         { value: 0 },
     ])
 
-    // Game instructions
+    // Game instructions - adjust for mobile/desktop
     const instructions = add([
-        text("Press SPACE to flap", { size: 16 }),
+        text(isMobile ? "Tap to flap" : "Press SPACE to flap", { 
+            size: isMobile ? 24 : 16,
+            font: "arial",
+        }),
         pos(24, 50),
         color(0, 0, 0),
     ])
@@ -142,10 +154,34 @@ scene("game", () => {
         }
     })
 
-    // Flap controls
+    // Controls for both touch and keyboard
+    // Keyboard controls
     onKeyPress("space", () => {
         if (!gameState.isGameOver && bird.isAlive) {
             bird.flap()
+        }
+    })
+
+    // Touch/click controls
+    onClick(() => {
+        if (!gameState.isGameOver && bird.isAlive) {
+            bird.flap()
+        } else if (gameState.canRestart) {
+            go("game")
+        }
+    })
+
+    // Mobile-friendly restart
+    onTouchStart(() => {
+        if (gameState.isGameOver && gameState.canRestart) {
+            go("game")
+        }
+    })
+
+    // Keyboard restart
+    onKeyPress("r", () => {
+        if (gameState.isGameOver && gameState.canRestart) {
+            go("game")
         }
     })
 
@@ -171,12 +207,34 @@ scene("game", () => {
     })
 
     function addGameOver() {
+        const gameOverText = isMobile ? "Game Over!\nTap to restart" : "Game Over!\nPress R to restart"
         add([
-            text("Game Over!\nPress R to restart", { size: 32, align: "center" }),
+            text(gameOverText, { 
+                size: isMobile ? 48 : 32, 
+                align: "center",
+                font: "arial",
+            }),
             pos(width() / 2, height() / 2),
             anchor("center"),
             color(255, 0, 0),
         ])
+        // Add a slight delay before allowing restart
+        wait(0.5, () => {
+            gameState.canRestart = true
+        })
+    }
+
+    // Function to create explosion effect
+    function createExplosion(bird) {
+        for (let i = 0; i < 20; i++) {
+            add([
+                circle(2),
+                pos(bird.pos),
+                color(255, 255, 0),
+                move(rand(0, 360), rand(60, 120)),
+                lifespan(0.5),
+            ])
+        }
     }
 
     // Function to create a pair of pipes
@@ -211,30 +269,6 @@ scene("game", () => {
             }
         ])
     }
-
-    // Function to create explosion particles
-    function createExplosion(p) {
-        const PARTICLE_COUNT = 20
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-            const angle = (2 * Math.PI * i) / PARTICLE_COUNT
-            const speed = randi(100, 200)
-            add([
-                circle(4),
-                pos(p.pos),
-                color(255, 255, 0),
-                opacity(1),
-                lifespan(0.5),
-                move(angle, speed),
-            ])
-        }
-    }
-
-    // Restart game
-    onKeyPress("r", () => {
-        if (gameState.isGameOver) {
-            go("game")
-        }
-    })
 })
 
 // Start the game
