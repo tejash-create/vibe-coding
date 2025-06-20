@@ -16,6 +16,8 @@ The goal of this repository is to provide:
 ### [FlappyBird](./FlappyBird)
 A browser-based Flappy Bird clone built with Kaboom.js. Just open the HTML file and start playing!
 
+**[▶️ Play Live Demo](https://tejash-create.github.io/vibe-coding/)**
+
 *More projects coming soon!*
 
 ## 🔧 How to Use
